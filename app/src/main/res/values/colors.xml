@@ -2,7 +2,8 @@
 <resources>
     <color name="colorPrimary">#4E4E4E</color>
     <color name="colorPrimaryDark">#393939</color>
-    <color name="button">#3A433A</color>
+    <color name="button">#475347</color>
+    <color name="buttonDisabled">#323332</color>
     <color name="colorAccent">#215E23</color>
     <color name="background">#222522</color>
     <color name="textColor">#C1C1C1</color>
