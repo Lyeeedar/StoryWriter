@@ -4,13 +4,29 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background"
     tools:context=".EditorFragment">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/colorPrimary"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/chapter_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="10dp"
+                android:layout_weight="1"
+                android:text="TextView"
+                android:textAppearance="@style/TextAppearance.AppCompat.Large"
+                android:textSize="24sp" />
+        </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -54,7 +70,6 @@
                 android:inputType="textLongMessage|textMultiLine"
                 android:lineSpacingExtra="0sp"
                 android:singleLine="false"
-                android:text="@string/lorem_ipsum"
                 android:textColor="@color/textColor" />
         </ScrollView>
 

@@ -5,10 +5,9 @@ import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
 import android.widget.EditText
+import android.widget.PopupMenu
 import androidx.fragment.app.Fragment
 import com.lyeeedar.Util.Future
 import kotlinx.android.synthetic.main.editor_fragment.*
@@ -17,11 +16,26 @@ import kotlinx.android.synthetic.main.editor_fragment.*
 class TextChange(var before: String, var after: String)
 
 class EditorFragment : Fragment() {
-    val textUndoStack = ArrayList<TextChange>()
-    val textRedoStack = ArrayList<TextChange>()
     var disableUndo = false
     var currentChange: TextChange? = null
-    var text: String = ""
+    var book: Book = Book()
+        set(value) {
+            field = value
+
+            chapter = book.chapters[0]
+        }
+
+    var chapter: Chapter = Chapter()
+        set(value) {
+            field = value
+
+            disableUndo = true
+            text_editor.setText(chapter.text)
+            chapter_title.setText(chapter.fullTitle)
+            disableUndo = false
+
+            updateUndoRedoButtons()
+        }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -30,9 +44,24 @@ class EditorFragment : Fragment() {
         return inflater.inflate(R.layout.editor_fragment, container, false)
     }
 
+    private fun loadBook() {
+        val book = Book()
+
+        for (i in 0 until 10) {
+            val chapter = Chapter()
+            chapter.index = i
+            chapter.text = resources.getString(R.string.lorem_ipsum)
+            chapter.title = "Totally awesome title"
+
+            book.chapters.add(chapter)
+        }
+
+        this.book = book
+    }
+
     fun updateUndoRedoButtons() {
-        undoButton.isEnabled = textUndoStack.size > 0
-        redoButton.isEnabled = textRedoStack.size > 0
+        undoButton.isEnabled = chapter.textUndoStack.size > 0
+        redoButton.isEnabled = chapter.textRedoStack.size > 0
 
         undoButton.background = ColorDrawable(if (undoButton.isEnabled) resources.getColor(R.color.button) else resources.getColor(R.color.buttonDisabled))
         redoButton.background = ColorDrawable(if (redoButton.isEnabled) resources.getColor(R.color.button) else resources.getColor(R.color.buttonDisabled))
@@ -41,24 +70,32 @@ class EditorFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        text = text_editor.text.toString()
+        loadBook()
 
         updateUndoRedoButtons()
-        //view.findViewById<Button>(R.id.button_first).setOnClickListener {
-        //    findNavController().navigate(R.id.action_FirstFragment_to_SecondFragment)
-        //}
+
+        chapter_title.setOnClickListener {
+            val popupMenu = PopupMenu(context, chapter_title)
+
+            for (chapter in book.chapters) {
+                popupMenu.menu.add(0, chapter.index, chapter.index, chapter.fullTitle)
+            }
+
+            popupMenu.setOnMenuItemClickListener { item ->
+                chapter = book.chapters[item.itemId]
+                false
+            }
+            popupMenu.show()
+        }
 
         undoButton.setOnClickListener {
             Future.cancel(text_editor)
 
-            val text = textUndoStack[textUndoStack.size-1]
-            textUndoStack.removeAt(textUndoStack.size-1)
-
-            textRedoStack.add(text)
+            chapter.undo()
 
             disableUndo = true
             val cursorPos = text_editor.selectionStart
-            text_editor.setText(text.before)
+            text_editor.setText(chapter.text)
             text_editor.setSelection(cursorPos)
             disableUndo = false
 
@@ -68,14 +105,11 @@ class EditorFragment : Fragment() {
         redoButton.setOnClickListener {
             Future.cancel(text_editor)
 
-            val text = textRedoStack[textRedoStack.size-1]
-            textRedoStack.removeAt(textRedoStack.size-1)
-
-            textUndoStack.add(text)
+            chapter.redo()
 
             disableUndo = true
             val cursorPos = text_editor.selectionStart
-            text_editor.setText(text.after)
+            text_editor.setText(chapter.text)
             text_editor.setSelection(cursorPos)
             disableUndo = false
 
@@ -84,9 +118,9 @@ class EditorFragment : Fragment() {
 
         text_editor.addTextChangedListener(object : TextChangedListener<EditText>(text_editor) {
             override fun onTextChanged(target: EditText, s: Editable?) {
-                val oldtext = text
+                val oldtext = chapter.text
                 val newtext = target.text.toString()
-                text = newtext
+                chapter.text = newtext
 
                 if (!disableUndo) {
                     if (currentChange == null) {
@@ -97,7 +131,7 @@ class EditorFragment : Fragment() {
 
                     Future.call({
                         val currentChange = currentChange
-                        if (currentChange != null) textUndoStack.add(currentChange)
+                        if (currentChange != null) chapter.textUndoStack.add(currentChange)
 
                         (context as Activity).runOnUiThread {
                             updateUndoRedoButtons()
@@ -105,7 +139,7 @@ class EditorFragment : Fragment() {
 
                     }, 0.5f, text_editor)
 
-                    textRedoStack.clear()
+                    chapter.textRedoStack.clear()
 
                     updateUndoRedoButtons()
                 }
