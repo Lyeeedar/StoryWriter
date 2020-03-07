@@ -1,0 +1,21 @@
+<resources>
+    <string name="app_name">StoryWriter</string>
+    <string name="action_settings">Settings</string>
+    <string name="editor_fragment_label">Editor Fragment</string>
+    <string name="next">Next</string>
+    <string name="previous">Previous</string>
+    <string name="lorem_ipsum">
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur in nunc nisi. Integer ac lectus risus. Aenean sed dolor rhoncus, maximus ipsum vel, sollicitudin orci. Nulla a diam magna. Nam mollis laoreet ante, eget commodo sem. Donec cursus tellus ut enim sollicitudin gravida. Vivamus pulvinar tincidunt ligula ac iaculis. Curabitur et interdum odio. Fusce gravida tortor a dapibus consectetur.
+\n
+Donec magna urna, congue quis elementum a, rhoncus a libero. Sed ac vehicula lectus. Sed lobortis mauris velit, a vehicula turpis auctor tristique. Sed sit amet tincidunt mi. Nulla eget velit pellentesque, eleifend erat ac, fringilla diam. Nunc lacinia ipsum lectus, nec imperdiet massa dictum quis. Quisque neque nulla, blandit non ullamcorper non, varius a lorem. Pellentesque semper metus et gravida faucibus. Aenean nibh odio, viverra in velit at, accumsan mattis sem. Donec luctus magna orci, sed vehicula massa commodo ut. Sed sed porta nunc.
+\n
+Pellentesque velit lectus, eleifend a varius id, facilisis eu dolor. Cras sodales sollicitudin est at sagittis. Vivamus semper nibh non nisi bibendum condimentum. Pellentesque placerat arcu sed neque lobortis, in blandit lacus vestibulum. Vivamus quis diam condimentum, mattis diam vitae, varius metus. Mauris tristique rutrum laoreet. Praesent mollis metus dolor, et rhoncus ligula pharetra sit amet. Sed at rhoncus mauris. Etiam sollicitudin purus sed tempor condimentum. Integer maximus euismod consectetur. Duis commodo risus in quam interdum cursus. In lobortis dui lacus, nec lobortis nunc tempor sed. Suspendisse est erat, porta vitae tristique at, faucibus eu urna.
+\n
+Donec efficitur libero lorem, a malesuada felis vestibulum vitae. Fusce et felis faucibus, viverra elit tristique, ultricies orci. Sed lobortis felis nisl, eu cursus neque gravida ac. Mauris quis nisi porttitor, vulputate justo non, rhoncus orci. Nunc ex elit, iaculis ac diam iaculis, dapibus vehicula quam. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Quisque elementum, nisi non ullamcorper faucibus, magna justo rutrum ante, sit amet varius elit ipsum gravida nisi. Pellentesque at pellentesque orci, sit amet luctus quam. Ut arcu tellus, iaculis vel ante id, suscipit sagittis tortor. Cras interdum ornare dui et porttitor. Nam malesuada magna eget ornare ultrices. Phasellus ac quam lacus. Proin accumsan arcu vel ex mollis, id faucibus libero eleifend. In efficitur et urna quis hendrerit. Donec at massa tortor. Integer tincidunt massa sed blandit congue.
+\n
+Proin porta ex nisl, vel rhoncus nisl pellentesque quis. Proin elementum nisl mattis, ultricies ante eu, tristique tortor. Nunc aliquet eros id nunc pulvinar, in posuere arcu congue. Aenean hendrerit aliquam vehicula. Nunc fermentum, leo congue pellentesque congue, mauris sem ultricies risus, et finibus diam felis sit amet risus. Sed malesuada nisl nisl, ut molestie felis vestibulum ut. Nam eget dolor ex. Donec ornare viverra leo, eget pulvinar nisl tempus vitae. Aenean nec luctus nibh, et mollis lorem. Quisque id sodales nisl, id laoreet ipsum. Donec ex elit, condimentum id orci sed, venenatis viverra purus. Praesent pharetra maximus tortor, quis tempus nisi maximus sed. Fusce tincidunt ex nulla, quis porta quam sollicitudin auctor. Mauris consequat rutrum lacus eu feugiat. Phasellus scelerisque hendrerit purus, quis sagittis diam rhoncus vitae. </string>
+    <string name="redo">Redo</string>
+    <string name="undo">Undo</string>
+    <string name="editor_hint">Enter text here</string>
+</resources>

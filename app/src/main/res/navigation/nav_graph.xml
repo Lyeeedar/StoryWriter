@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/EditorFragment">
+
+    <fragment
+        android:id="@+id/EditorFragment"
+        android:name="com.lyeeedar.storywriter.EditorFragment"
+        android:label="@string/editor_fragment_label"
+        tools:layout="@layout/editor_fragment">
+
+    </fragment>
+
+</navigation>
