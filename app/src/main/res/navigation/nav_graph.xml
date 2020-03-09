@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav_graph"
-    app:startDestination="@id/EditorFragment">
+    app:startDestination="@id/BookPickerFragment">
 
     <fragment
         android:id="@+id/EditorFragment"
@@ -11,6 +11,20 @@
         android:label="@string/editor_fragment_label"
         tools:layout="@layout/editor_fragment">
 
+        <action
+            android:id="@+id/action_EditorFragment_to_BookPickerFragment"
+            app:destination="@id/BookPickerFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/BookPickerFragment"
+        android:name="com.lyeeedar.storywriter.BookPickerFragment"
+        android:label="@string/book_picker_fragment_label"
+        tools:layout="@layout/book_picker_fragment">
+
+        <action
+            android:id="@+id/action_BookPickerFragment_to_EditorFragment"
+            app:destination="@id/EditorFragment" />
     </fragment>
 
 </navigation>

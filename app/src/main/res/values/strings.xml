@@ -1,7 +1,9 @@
 <resources>
     <string name="app_name">StoryWriter</string>
+    <string name="app_name_pretty">Story Writer</string>
     <string name="action_settings">Settings</string>
     <string name="editor_fragment_label">Editor Fragment</string>
+    <string name="book_picker_fragment_label">Book Picker Fragment</string>
     <string name="next">Next</string>
     <string name="previous">Previous</string>
     <string name="lorem_ipsum">

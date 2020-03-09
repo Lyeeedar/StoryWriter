@@ -12,17 +12,18 @@ import androidx.fragment.app.Fragment
 import com.lyeeedar.Util.Future
 import kotlinx.android.synthetic.main.editor_fragment.*
 
-
 class TextChange(var before: String, var after: String)
 
 class EditorFragment : Fragment() {
     var disableUndo = false
     var currentChange: TextChange? = null
-    var book: Book = Book()
+    var book: Book = Book("Example")
         set(value) {
-            field = value
+            if (field != value) {
+                field = value
 
-            chapter = book.chapters[0]
+                chapter = book.chapters[0]
+            }
         }
 
     var chapter: Chapter = Chapter()
@@ -44,21 +45,6 @@ class EditorFragment : Fragment() {
         return inflater.inflate(R.layout.editor_fragment, container, false)
     }
 
-    private fun loadBook() {
-        val book = Book()
-
-        for (i in 0 until 10) {
-            val chapter = Chapter()
-            chapter.index = i
-            chapter.text = resources.getString(R.string.lorem_ipsum)
-            chapter.title = "Totally awesome title"
-
-            book.chapters.add(chapter)
-        }
-
-        this.book = book
-    }
-
     fun updateUndoRedoButtons() {
         undoButton.isEnabled = chapter.textUndoStack.size > 0
         redoButton.isEnabled = chapter.textRedoStack.size > 0
@@ -70,15 +56,17 @@ class EditorFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        loadBook()
+        book = (activity as MainActivity).viewModel.book
 
         updateUndoRedoButtons()
 
         chapter_title.setOnClickListener {
             val popupMenu = PopupMenu(context, chapter_title)
 
+            var i = 0
             for (chapter in book.chapters) {
-                popupMenu.menu.add(0, chapter.index, chapter.index, chapter.fullTitle)
+                popupMenu.menu.add(0, i, i, chapter.fullTitle)
+                i++
             }
 
             popupMenu.setOnMenuItemClickListener { item ->

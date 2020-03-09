@@ -1,6 +1,6 @@
 package com.lyeeedar.storywriter
 
-class Book
+class Book(val title: String)
 {
     val chapters = ArrayList<Chapter>()
 }
@@ -15,7 +15,7 @@ class Chapter
     val textRedoStack = ArrayList<TextChange>()
 
     val fullTitle: String
-        get() = "${index+1}. $title"
+        get() = "${index}. $title"
 
     fun undo() {
         val text = textUndoStack[textUndoStack.size-1]
