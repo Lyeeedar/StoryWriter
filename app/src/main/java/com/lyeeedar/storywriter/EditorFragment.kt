@@ -6,7 +6,9 @@ import android.os.Bundle
 import android.text.Editable
 import android.text.Html
 import android.text.TextWatcher
-import android.view.*
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.PopupMenu
 import androidx.fragment.app.Fragment
@@ -39,7 +41,7 @@ class EditorFragment : Fragment() {
             updateUndoRedoButtons()
         }
 
-    val spellCheckerThread = SpellCheckerThread(this)
+    private val spellCheckerThread = SpellCheckerThread(this)
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -61,14 +63,12 @@ class EditorFragment : Fragment() {
     var ignoreUpdate = false
     fun updateText() {
         val cursorPos = text_editor.selectionStart
-        val scrollStart = text_editor.scrollY
 
         ignoreUpdate = true
         text_editor.setText(Html.fromHtml(chapter.getAnnotatedText()))
         ignoreUpdate = false
 
         text_editor.setSelection(Math.min(cursorPos, text_editor.text.length-1))
-        text_editor.scrollY = scrollStart
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -97,7 +97,9 @@ class EditorFragment : Fragment() {
         undoButton.setOnClickListener {
             Future.cancel(text_editor)
 
+            book.backup(context!!)
             chapter.undo()
+            book.backup(context!!)
 
             disableUndo = true
             updateText()
@@ -109,7 +111,9 @@ class EditorFragment : Fragment() {
         redoButton.setOnClickListener {
             Future.cancel(text_editor)
 
+            book.backup(context!!)
             chapter.redo()
+            book.backup(context!!)
 
             disableUndo = true
             updateText()
@@ -131,7 +135,9 @@ class EditorFragment : Fragment() {
 
                     Future.call({
                         synchronized(chapter) {
+                            book.backup(context!!)
                             chapter.flushRawText()
+                            book.backup(context!!)
                         }
                     }, 0.5f, "flush")
 
@@ -216,13 +222,15 @@ class SpellCheckerThread(val editor: EditorFragment) : Thread() {
                     (editor.context as Activity).runOnUiThread {
                         editor.updateText()
                     }
+
+                    editor.book.backup(editor.context!!)
                 }
             }
 
             index++
 
             Thread.yield()
-            Thread.sleep(100)
+            Thread.sleep(200)
             Thread.yield()
         }
     }

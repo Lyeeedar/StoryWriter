@@ -1,9 +1,12 @@
 package com.lyeeedar.storywriter
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import android.view.Menu
 import android.view.MenuItem
+import androidx.core.content.ContextCompat
 
 class MainActivity : AppCompatActivity() {
 

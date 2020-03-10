@@ -1,11 +1,73 @@
 package com.lyeeedar.storywriter
 
+import android.content.Context
+import com.esotericsoftware.kryo.Kryo
+import com.esotericsoftware.kryo.io.Input
+import com.esotericsoftware.kryo.io.Output
 import org.languagetool.JLanguageTool
 import org.languagetool.rules.RuleMatch
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.util.zip.GZIPOutputStream
 
-class Book(val title: String)
+class Book(var title: String)
 {
     val chapters = ArrayList<Chapter>()
+
+    private val backupFileName = "$title-backup.bak"
+
+    fun loadBackup(context: Context) {
+        var input: Input? = null
+        try
+        {
+            input = Input(context.openFileInput(backupFileName))
+            load(kryo, input)
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+        }
+        finally
+        {
+            input?.close()
+        }
+    }
+
+    fun backup(context: Context) {
+        val rawBytes = serialize(this)
+
+        val outStream = ByteArrayOutputStream(rawBytes.size)
+        val compressionStream = GZIPOutputStream(outStream)
+
+        compressionStream.write(rawBytes)
+        compressionStream.close()
+        outStream.close()
+
+        val compressedBytes = outStream.toByteArray()
+
+        context.openFileOutput(backupFileName, Context.MODE_PRIVATE).write(compressedBytes)
+    }
+
+    fun save(kryo: Kryo, output: Output) {
+        output.writeString(title)
+        output.writeInt(chapters.size, true)
+        for (chapter in chapters) {
+            synchronized(chapter) {
+                chapter.save(kryo, output)
+            }
+        }
+    }
+
+    fun load(kryo: Kryo, input: Input) {
+        title = input.readString()
+        val numChapters = input.readInt(true)
+        for (i in 0 until numChapters) {
+            val chapter = Chapter()
+            chapter.load(kryo, input)
+
+            chapters.add(chapter)
+        }
+    }
 }
 
 class TextChange(var before: String, var after: String)
@@ -87,6 +149,27 @@ class Chapter
 
         setAnnotatedText(text.after)
     }
+
+    fun save(kryo: Kryo, output: Output) {
+        output.writeString(title)
+        output.writeInt(index)
+        output.writeInt(paragraphs.size, true)
+        for (paragraph in paragraphs) {
+            paragraph.save(kryo, output)
+        }
+    }
+
+    fun load(kryo: Kryo, input: Input) {
+        title = input.readString()
+        index = input.readInt()
+        val numParagraphs = input.readInt(true)
+        for (i in 0 until numParagraphs) {
+            val paragraph = Paragraph()
+            paragraph.load(kryo, input)
+
+            paragraphs.add(paragraph)
+        }
+    }
 }
 
 class ErrorRegion(var start: Int, var end: Int, var message: String)
@@ -106,14 +189,53 @@ class Paragraph
 
     var spellCheckedHash = 0
     var spellCheckedAnnotatedText: String = ""
-    val spellcheckResults = ArrayList<RuleMatch>()
+    val spellcheckResults = ArrayList<ErrorRegion>()
 
     fun doSpellCheck(languageTool: JLanguageTool): Boolean {
         val textHash = text.hashCode()
         if (spellCheckedHash != textHash) {
             spellCheckedHash = textHash
+
+            val errors = languageTool.check(text)
+            val regions = ArrayList<ErrorRegion>()
+
+            for (error in errors) {
+                val newregion = ErrorRegion(error.fromPos, error.toPos, error.message)
+                var addRegion = true
+
+                val itr = regions.iterator()
+                while (itr.hasNext()) {
+                    val region = itr.next()
+
+                    // contained completely within
+                    if (region.start <= error.fromPos && region.end >= error.toPos) {
+                        addRegion = false
+                        region.subregions.add(newregion)
+                    }
+                    // contains
+                    else if (error.fromPos <= region.start && error.toPos >= region.end) {
+                        itr.remove()
+                        newregion.subregions.add(region)
+                    }
+                    // overlaps
+                    else if (error.fromPos >= region.start && error.toPos <= region.end) {
+                        addRegion = false
+                        region.start = Math.min(error.fromPos, region.start)
+                        region.end = Math.min(error.toPos, region.end)
+                        region.subregions.add(region)
+                    }
+                }
+
+                if (addRegion) {
+                    regions.add(newregion)
+                }
+            }
+
+            regions.sortByDescending { it.start }
+
             spellcheckResults.clear()
-            spellcheckResults.addAll(languageTool.check(text))
+            spellcheckResults.addAll(regions)
+
             spellCheckedAnnotatedText = getAnnotatedText()
 
             return true
@@ -124,45 +246,10 @@ class Paragraph
 
     fun getAnnotatedText(): String {
         val rawText = text
-        val regions = ArrayList<ErrorRegion>()
-
-        for (error in spellcheckResults) {
-            val newregion = ErrorRegion(error.fromPos, error.toPos, error.message)
-            var addRegion = true
-
-            val itr = regions.iterator()
-            while (itr.hasNext()) {
-                val region = itr.next()
-
-                // contained completely within
-                if (region.start <= error.fromPos && region.end >= error.toPos) {
-                    addRegion = false
-                    region.subregions.add(newregion)
-                }
-                // contains
-                else if (error.fromPos <= region.start && error.toPos >= region.end) {
-                    itr.remove()
-                    newregion.subregions.add(region)
-                }
-                // overlaps
-                else if (error.fromPos >= region.start && error.toPos <= region.end) {
-                    addRegion = false
-                    region.start = Math.min(error.fromPos, region.start)
-                    region.end = Math.min(error.toPos, region.end)
-                    region.subregions.add(region)
-                }
-            }
-
-            if (addRegion) {
-                regions.add(newregion)
-            }
-        }
-
-        regions.sortByDescending { it.start }
 
         var workingText = rawText
         val finalTextParts = ArrayList<String>()
-        for (region in regions) {
+        for (region in spellcheckResults) {
             val textAfter = workingText.substring(region.end)
             val textInside = workingText.substring(region.start, region.end)
 
@@ -186,6 +273,27 @@ class Paragraph
     fun setAnnotatedText(text: String) {
         val rawText = text.replace(errorBlockStart, "").replace(errorBlockEnd, "")
         this.text = rawText
+    }
+
+    fun save(kryo: Kryo, output: Output) {
+        output.writeString(text)
+        output.writeInt(spellCheckedHash)
+        output.writeString(spellCheckedAnnotatedText)
+        output.writeInt(spellcheckResults.size, true)
+        for (result in spellcheckResults) {
+            kryo.writeObject(output, result)
+        }
+    }
+
+    fun load(kryo: Kryo, input: Input) {
+        text = input.readString()
+        spellCheckedHash = input.readInt()
+        spellCheckedAnnotatedText = input.readString()
+        val numResults = input.readInt(true)
+        for (i in 0 until numResults) {
+            val result = kryo.readObject(input, ErrorRegion::class.java)
+            spellcheckResults.add(result)
+        }
     }
 
     companion object

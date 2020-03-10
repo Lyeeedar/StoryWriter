@@ -30,20 +30,24 @@ class BookPickerFragment : Fragment()
         return inflater.inflate(R.layout.book_picker_fragment, container, false)
     }
 
+    private val READ_EXTERNAL_STORAGE_PERMISSION_CODE = 1
+    private val WRITE_EXTERNAL_STORAGE_PERMISSION_CODE = 2
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        if (ContextCompat.checkSelfPermission(context!!, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_DENIED){
+            requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), READ_EXTERNAL_STORAGE_PERMISSION_CODE)
+        }
+        if (ContextCompat.checkSelfPermission(context!!, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_DENIED){
+            requestPermissions(arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), WRITE_EXTERNAL_STORAGE_PERMISSION_CODE)
+        }
 
         findBooks()
 
         book_sources.adapter = BookSourceAdapter(context!!, this, bookSources)
     }
 
-    private val READ_EXTERNAL_STORAGE_PERMISSION_CODE = 1
     private fun findBooks() {
-        if (ContextCompat.checkSelfPermission(context!!, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_DENIED){
-            requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), READ_EXTERNAL_STORAGE_PERMISSION_CODE)
-        }
-
         searchDiskFolder("Download")
         searchDiskFolder("Documents")
     }
@@ -70,14 +74,14 @@ class BookPickerFragment : Fragment()
     }
 
     fun loadBook(source: BookSource, path: String) {
-        (activity as MainActivity).viewModel.book = source.load(path)
+        (activity as MainActivity).viewModel.book = source.load(path, context!!)
 
         findNavController().navigate(R.id.action_BookPickerFragment_to_EditorFragment)
     }
 }
 
 class BookSource(val sourceName: String, val rootPath: String, val files: ArrayList<String>) {
-    fun load(path: String): Book {
+    fun load(path: String, context: Context): Book {
         val file = File(path)
         if (!file.exists()) throw IOException("File $path does not exist!")
 
@@ -108,6 +112,8 @@ class BookSource(val sourceName: String, val rootPath: String, val files: ArrayL
         for (chapter in book.chapters) {
             chapter.flushRawText()
         }
+
+        book.loadBackup(context)
 
         return book
     }
