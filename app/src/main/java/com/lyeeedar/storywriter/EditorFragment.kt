@@ -50,12 +50,6 @@ class EditorFragment : Fragment() {
         return inflater.inflate(R.layout.editor_fragment, container, false)
     }
 
-    override fun onDestroyView() {
-        super.onDestroyView()
-
-        spellCheckerThread.stop()
-    }
-
     fun updateUndoRedoButtons() {
         undoButton.isEnabled = chapter.textUndoStack.size > 0
         redoButton.isEnabled = chapter.textRedoStack.size > 0
@@ -64,10 +58,17 @@ class EditorFragment : Fragment() {
         redoButton.background = ColorDrawable(if (redoButton.isEnabled) resources.getColor(R.color.button) else resources.getColor(R.color.buttonDisabled))
     }
 
+    var ignoreUpdate = false
     fun updateText() {
         val cursorPos = text_editor.selectionStart
+        val scrollStart = text_editor.scrollY
+
+        ignoreUpdate = true
         text_editor.setText(Html.fromHtml(chapter.getAnnotatedText()))
-        text_editor.setSelection(cursorPos)
+        ignoreUpdate = false
+
+        text_editor.setSelection(Math.min(cursorPos, text_editor.text.length-1))
+        text_editor.scrollY = scrollStart
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -119,34 +120,42 @@ class EditorFragment : Fragment() {
 
         text_editor.addTextChangedListener(object : TextChangedListener<EditText>(text_editor) {
             override fun onTextChanged(target: EditText, s: Editable?) {
-                val oldtext = chapter.rawText
-                val newtext = target.text.toString()
-                chapter.rawText = newtext
+                if (ignoreUpdate) return
 
-                Future.call({
-                    chapter.flushRawText()
-                }, 0.5f, "flush")
+                synchronized(chapter) {
+                    chapter.hasUnflushedText = true
 
-                if (!disableUndo) {
-                    if (currentChange == null) {
-                        currentChange = TextChange(oldtext, newtext)
-                    } else {
-                        currentChange!!.after = newtext
-                    }
+                    val oldtext = chapter.rawText
+                    val newtext = target.text.toString()
+                    chapter.rawText = newtext
 
                     Future.call({
-                        val currentChange = currentChange
-                        if (currentChange != null) chapter.textUndoStack.add(currentChange)
+                        synchronized(chapter) {
+                            chapter.flushRawText()
+                        }
+                    }, 0.5f, "flush")
 
-                        (context as Activity).runOnUiThread {
-                            updateUndoRedoButtons()
+                    if (!disableUndo) {
+                        if (currentChange == null) {
+                            currentChange = TextChange(oldtext, newtext)
+                        } else {
+                            currentChange!!.after = newtext
                         }
 
-                    }, 0.5f, "undoredo")
+                        Future.call({
+                            val currentChange = currentChange
+                            if (currentChange != null) chapter.textUndoStack.add(currentChange)
 
-                    chapter.textRedoStack.clear()
+                            (context as Activity).runOnUiThread {
+                                updateUndoRedoButtons()
+                            }
 
-                    updateUndoRedoButtons()
+                        }, 0.5f, "undoredo")
+
+                        chapter.textRedoStack.clear()
+
+                        updateUndoRedoButtons()
+                    }
                 }
             }
         })
@@ -189,20 +198,32 @@ class SpellCheckerThread(val editor: EditorFragment) : Thread() {
             val currentTime = System.currentTimeMillis()
             time = currentTime
 
+            var paragraph: Paragraph? = null
             synchronized(editor.chapter) {
-                if (index >= editor.chapter.paragraphs.size) {
-                    index = 0
+                if (!editor.chapter.hasUnflushedText) {
+                    if (index >= editor.chapter.paragraphs.size) {
+                        index = 0
+                    }
+
+                    paragraph = editor.chapter.paragraphs.get(index)
                 }
+            }
 
-                val paragraph = editor.chapter.paragraphs.get(index)
-                paragraph.doSpellCheck(languageTool)
+            val didWork = paragraph?.doSpellCheck(languageTool) ?: false
 
-                (editor.context as Activity).runOnUiThread {
-                    editor.updateText()
+            synchronized(editor.chapter) {
+                if (didWork && !editor.chapter.hasUnflushedText) {
+                    (editor.context as Activity).runOnUiThread {
+                        editor.updateText()
+                    }
                 }
             }
 
             index++
+
+            Thread.yield()
+            Thread.sleep(100)
+            Thread.yield()
         }
     }
 }

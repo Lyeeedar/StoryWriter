@@ -23,41 +23,47 @@ class Chapter
     val fullTitle: String
         get() = "${index}. $title"
 
+    var hasUnflushedText = false
     var rawText: String = ""
 
     fun flushRawText() {
         setAnnotatedText(rawText)
+        hasUnflushedText = false
     }
 
     fun getAnnotatedText(): String {
 
-        val output = StringBuilder()
+        val annotated = StringBuilder()
+        val raw = StringBuilder()
 
         for (paragraph in paragraphs) {
-            output.append(paragraph.spellCheckedAnnotatedText)
-            output.append("\n\n")
+            annotated.append(paragraph.spellCheckedAnnotatedText)
+            annotated.append("<br />")
+
+            raw.append(paragraph.text)
+            raw.append("\n")
         }
 
-        rawText = output.toString()
-        return rawText
+        rawText = raw.toString()
+        return annotated.toString()
     }
 
     fun setAnnotatedText(text: String) {
 
         val paragraphMap = HashMap<Int, Paragraph>()
         for (paragraph in paragraphs) {
-            paragraphMap.put(paragraph.spellCheckedAnnotatedText.hashCode(), paragraph)
+            paragraphMap.put(paragraph.text.trim().hashCode(), paragraph)
         }
         paragraphs.clear()
 
-        val textParagraphs = text.split('\n')
+        val textParagraphs = text.split("\n")
         for (textParagraph in textParagraphs) {
             if (textParagraph.isBlank()) continue
 
-            var paragraph = paragraphMap.get(textParagraph.hashCode())
+            var paragraph = paragraphMap.get(textParagraph.trim().hashCode())
             if (paragraph == null) {
                 paragraph = Paragraph()
-                paragraph.setAnnotatedText(textParagraph)
+                paragraph.text = textParagraph
             }
 
             paragraphs.add(paragraph)
@@ -102,14 +108,18 @@ class Paragraph
     var spellCheckedAnnotatedText: String = ""
     val spellcheckResults = ArrayList<RuleMatch>()
 
-    fun doSpellCheck(languageTool: JLanguageTool) {
+    fun doSpellCheck(languageTool: JLanguageTool): Boolean {
         val textHash = text.hashCode()
         if (spellCheckedHash != textHash) {
             spellCheckedHash = textHash
             spellcheckResults.clear()
             spellcheckResults.addAll(languageTool.check(text))
             spellCheckedAnnotatedText = getAnnotatedText()
+
+            return true
         }
+
+        return false
     }
 
     fun getAnnotatedText(): String {
@@ -163,6 +173,7 @@ class Paragraph
 
             workingText = workingText.substring(0, region.start)
         }
+        finalTextParts.add(workingText)
 
         val finalText = StringBuilder()
         for (text in finalTextParts.reversed()) {
