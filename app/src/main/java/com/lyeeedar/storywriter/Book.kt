@@ -5,9 +5,7 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import org.languagetool.JLanguageTool
-import org.languagetool.rules.RuleMatch
-import java.io.ByteArrayOutputStream
-import java.io.File
+import java.util.zip.GZIPInputStream
 import java.util.zip.GZIPOutputStream
 
 class Book(var title: String)
@@ -20,12 +18,13 @@ class Book(var title: String)
         var input: Input? = null
         try
         {
-            input = Input(context.openFileInput(backupFileName))
+            input = Input(GZIPInputStream(context.openFileInput(backupFileName)))
             load(kryo, input)
         }
         catch (e: Exception)
         {
             e.printStackTrace()
+            context.deleteFile(backupFileName)
         }
         finally
         {
@@ -34,18 +33,20 @@ class Book(var title: String)
     }
 
     fun backup(context: Context) {
-        val rawBytes = serialize(this)
-
-        val outStream = ByteArrayOutputStream(rawBytes.size)
-        val compressionStream = GZIPOutputStream(outStream)
-
-        compressionStream.write(rawBytes)
-        compressionStream.close()
-        outStream.close()
-
-        val compressedBytes = outStream.toByteArray()
-
-        context.openFileOutput(backupFileName, Context.MODE_PRIVATE).write(compressedBytes)
+        var output: Output? = null
+        try
+        {
+            output = Output(GZIPOutputStream(context.openFileOutput(backupFileName, Context.MODE_PRIVATE)))
+            save(kryo, output)
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+        }
+        finally
+        {
+            output?.close()
+        }
     }
 
     fun save(kryo: Kryo, output: Output) {
@@ -60,6 +61,8 @@ class Book(var title: String)
 
     fun load(kryo: Kryo, input: Input) {
         title = input.readString()
+        chapters.clear()
+
         val numChapters = input.readInt(true)
         for (i in 0 until numChapters) {
             val chapter = Chapter()
@@ -162,18 +165,37 @@ class Chapter
     fun load(kryo: Kryo, input: Input) {
         title = input.readString()
         index = input.readInt()
+
+        val raw = StringBuilder()
+
         val numParagraphs = input.readInt(true)
         for (i in 0 until numParagraphs) {
             val paragraph = Paragraph()
             paragraph.load(kryo, input)
 
             paragraphs.add(paragraph)
+
+            raw.append(paragraph.text)
+            raw.append("\n")
         }
+
+        rawText = raw.toString()
     }
 }
 
-class ErrorRegion(var start: Int, var end: Int, var message: String)
+class ErrorRegion()
 {
+    var start: Int = 0
+    var end: Int = 0
+    var message: String = ""
+
+    constructor(start: Int, end: Int, message: String) : this()
+    {
+        this.start = start
+        this.end = end
+        this.message = message
+    }
+
     val subregions = ArrayList<ErrorRegion>()
 }
 class Paragraph

@@ -65,7 +65,9 @@ class EditorFragment : Fragment() {
         val cursorPos = text_editor.selectionStart
 
         ignoreUpdate = true
-        text_editor.setText(Html.fromHtml(chapter.getAnnotatedText()))
+        synchronized(chapter) {
+            text_editor.setText(Html.fromHtml(chapter.getAnnotatedText()))
+        }
         ignoreUpdate = false
 
         text_editor.setSelection(Math.min(cursorPos, text_editor.text.length-1))
