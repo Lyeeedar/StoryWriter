@@ -4,6 +4,7 @@ import android.app.Activity
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.text.Editable
+import android.text.Html
 import android.text.TextWatcher
 import android.view.*
 import android.widget.EditText
@@ -11,8 +12,8 @@ import android.widget.PopupMenu
 import androidx.fragment.app.Fragment
 import com.lyeeedar.Util.Future
 import kotlinx.android.synthetic.main.editor_fragment.*
-
-class TextChange(var before: String, var after: String)
+import org.languagetool.JLanguageTool
+import org.languagetool.language.BritishEnglish
 
 class EditorFragment : Fragment() {
     var disableUndo = false
@@ -31,18 +32,28 @@ class EditorFragment : Fragment() {
             field = value
 
             disableUndo = true
-            text_editor.setText(chapter.text)
+            updateText()
             chapter_title.setText(chapter.fullTitle)
             disableUndo = false
 
             updateUndoRedoButtons()
         }
 
+    val spellCheckerThread = SpellCheckerThread(this)
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
+        spellCheckerThread.start()
+
         return inflater.inflate(R.layout.editor_fragment, container, false)
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+
+        spellCheckerThread.stop()
     }
 
     fun updateUndoRedoButtons() {
@@ -51,6 +62,12 @@ class EditorFragment : Fragment() {
 
         undoButton.background = ColorDrawable(if (undoButton.isEnabled) resources.getColor(R.color.button) else resources.getColor(R.color.buttonDisabled))
         redoButton.background = ColorDrawable(if (redoButton.isEnabled) resources.getColor(R.color.button) else resources.getColor(R.color.buttonDisabled))
+    }
+
+    fun updateText() {
+        val cursorPos = text_editor.selectionStart
+        text_editor.setText(Html.fromHtml(chapter.getAnnotatedText()))
+        text_editor.setSelection(cursorPos)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -82,9 +99,7 @@ class EditorFragment : Fragment() {
             chapter.undo()
 
             disableUndo = true
-            val cursorPos = text_editor.selectionStart
-            text_editor.setText(chapter.text)
-            text_editor.setSelection(cursorPos)
+            updateText()
             disableUndo = false
 
             updateUndoRedoButtons()
@@ -96,9 +111,7 @@ class EditorFragment : Fragment() {
             chapter.redo()
 
             disableUndo = true
-            val cursorPos = text_editor.selectionStart
-            text_editor.setText(chapter.text)
-            text_editor.setSelection(cursorPos)
+            updateText()
             disableUndo = false
 
             updateUndoRedoButtons()
@@ -106,9 +119,13 @@ class EditorFragment : Fragment() {
 
         text_editor.addTextChangedListener(object : TextChangedListener<EditText>(text_editor) {
             override fun onTextChanged(target: EditText, s: Editable?) {
-                val oldtext = chapter.text
+                val oldtext = chapter.rawText
                 val newtext = target.text.toString()
-                chapter.text = newtext
+                chapter.rawText = newtext
+
+                Future.call({
+                    chapter.flushRawText()
+                }, 0.5f, "flush")
 
                 if (!disableUndo) {
                     if (currentChange == null) {
@@ -125,7 +142,7 @@ class EditorFragment : Fragment() {
                             updateUndoRedoButtons()
                         }
 
-                    }, 0.5f, text_editor)
+                    }, 0.5f, "undoredo")
 
                     chapter.textRedoStack.clear()
 
@@ -159,4 +176,33 @@ abstract class TextChangedListener<T>(private val target: T) : TextWatcher {
 
     abstract fun onTextChanged(target: T, s: Editable?)
 
+}
+
+class SpellCheckerThread(val editor: EditorFragment) : Thread() {
+    @Synchronized
+    override fun run() {
+        val languageTool = JLanguageTool(BritishEnglish())
+        var index = 0
+
+        var time = System.currentTimeMillis()
+        while (true) {
+            val currentTime = System.currentTimeMillis()
+            time = currentTime
+
+            synchronized(editor.chapter) {
+                if (index >= editor.chapter.paragraphs.size) {
+                    index = 0
+                }
+
+                val paragraph = editor.chapter.paragraphs.get(index)
+                paragraph.doSpellCheck(languageTool)
+
+                (editor.context as Activity).runOnUiThread {
+                    editor.updateText()
+                }
+            }
+
+            index++
+        }
+    }
 }

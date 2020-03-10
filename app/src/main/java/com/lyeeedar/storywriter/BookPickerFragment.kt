@@ -100,9 +100,13 @@ class BookSource(val sourceName: String, val rootPath: String, val files: ArrayL
                 currentChapter.title = title
                 book.chapters.add(currentChapter)
             } else {
-                if (currentChapter.text.isNotEmpty()) currentChapter.text += "\n"
-                currentChapter.text += line
+                if (currentChapter.rawText.isNotEmpty()) currentChapter.rawText += "\n"
+                currentChapter.rawText += line
             }
+        }
+
+        for (chapter in book.chapters) {
+            chapter.flushRawText()
         }
 
         return book

@@ -11,6 +11,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        System.setProperty("jaxp.debug", "true")
+        System.setProperty("org.xml.sax.driver","org.xmlpull.v1.sax2.Driver")
+
         setContentView(R.layout.activity_main)
     }
 
